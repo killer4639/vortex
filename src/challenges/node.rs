@@ -1,9 +1,12 @@
+use crate::challenges::broadcast::BroadcastData;
+
 #[derive(Debug)]
 #[allow(dead_code)]
 pub struct Node {
     pub id: String,
     pub peers: Vec<String>,
     pub next_msg_id: u64,
+    pub broadcast_data: Option<BroadcastData>
 }
 
 impl Node {

@@ -26,6 +26,7 @@ pub fn init(msg: Message<InitBody>) -> Result<Message<InitBody>> {
         id: node_id.clone(),
         peers,
         next_msg_id: 0,
+        broadcast_data: None
     };
     
     let cluster = global_cluster();

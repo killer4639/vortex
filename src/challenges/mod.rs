@@ -7,3 +7,6 @@ pub mod echo;
 
 #[path ="generate/mod.rs"]
 pub mod generate;
+
+#[path ="broadcast/mod.rs"]
+pub mod broadcast;

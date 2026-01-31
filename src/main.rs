@@ -1,8 +1,8 @@
 mod challenges;
-use std::fs::OpenOptions;
 use std::io::{self, BufWriter, Write};
 
 use anyhow::{Context, Result};
+use challenges::broadcast::{BroadcastBody, ReadBody, TopologyBody};
 use challenges::echo::EchoBody;
 use challenges::init::InitBody;
 use challenges::generate::GenerateBody;
@@ -21,6 +21,9 @@ pub enum TypedMessage {
     Init(Message<InitBody>),
     Echo(Message<EchoBody>),
     Generate(Message<GenerateBody>),
+    Broadcast(Message<BroadcastBody>),
+    Read(Message<ReadBody>),
+    Topology(Message<TopologyBody>),
     Unknown(Message<Value>),
 }
 
@@ -58,6 +61,9 @@ pub fn parse_typed_message(msg: Message<Value>) -> Result<TypedMessage> {
         "init" => Ok(TypedMessage::Init(parse_message(msg)?)),
         "echo" => Ok(TypedMessage::Echo(parse_message(msg)?)),
         "generate" => Ok(TypedMessage::Generate(parse_message(msg)?)),
+        "broadcast" => Ok(TypedMessage::Broadcast(parse_message(msg)?)),
+        "read" => Ok(TypedMessage::Read(parse_message(msg)?)),
+        "topology" => Ok(TypedMessage::Topology(parse_message(msg)?)),
         _ => Ok(TypedMessage::Unknown(msg)),
     }
 }
@@ -102,6 +108,9 @@ fn main() -> anyhow::Result<()> {
             TypedMessage::Init(msg) => message_to_value(challenges::init::init(msg)?),
             TypedMessage::Echo(msg) => message_to_value(challenges::echo::echo(msg)?),
             TypedMessage::Generate(msg) => message_to_value(challenges::generate::generate_unique_id(msg)?),
+            TypedMessage::Broadcast(msg) => message_to_value(challenges::broadcast::broadcast(msg)),
+            TypedMessage::Read(msg) => message_to_value(challenges::broadcast::read(msg)),
+            TypedMessage::Topology(msg) => message_to_value(challenges::broadcast::topology(msg)),
             TypedMessage::Unknown(msg) => Ok(msg),
         }?;
 
