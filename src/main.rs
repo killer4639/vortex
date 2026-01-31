@@ -90,12 +90,23 @@ pub fn send<T: Serialize>(msg: &Message<T>, output: &mut impl Write) -> Result<(
 fn main() -> anyhow::Result<()> {
     let stdin = io::stdin().lock();
     let mut stdout = BufWriter::new(io::stdout().lock());
+    let log_file = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open("vortex.log")?;
+    let mut log_writer = BufWriter::new(log_file);
 
     let messages = serde_json::Deserializer::from_reader(stdin).into_iter::<Message<Value>>();
 
     // Process remaining messages
     for msg in messages {
         let msg = msg?;
+        writeln!(
+            &mut log_writer,
+            "received message: {}",
+            serde_json::to_string(&msg).unwrap_or_default()
+        )?;
+        log_writer.flush()?;
         let msg_typ = parse_typed_message(msg)?;
 
         let response = match msg_typ {
