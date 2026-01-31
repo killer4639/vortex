@@ -1,9 +1,11 @@
 mod challenges;
+use std::fs::OpenOptions;
 use std::io::{self, BufWriter, Write};
 
 use anyhow::{Context, Result};
 use challenges::echo::EchoBody;
 use challenges::init::InitBody;
+use challenges::generate::GenerateBody;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::Value;
 
@@ -18,6 +20,7 @@ pub struct Message<T> {
 pub enum TypedMessage {
     Init(Message<InitBody>),
     Echo(Message<EchoBody>),
+    Generate(Message<GenerateBody>),
     Unknown(Message<Value>),
 }
 
@@ -54,6 +57,7 @@ pub fn parse_typed_message(msg: Message<Value>) -> Result<TypedMessage> {
     match typ {
         "init" => Ok(TypedMessage::Init(parse_message(msg)?)),
         "echo" => Ok(TypedMessage::Echo(parse_message(msg)?)),
+        "generate" => Ok(TypedMessage::Generate(parse_message(msg)?)),
         _ => Ok(TypedMessage::Unknown(msg)),
     }
 }
@@ -97,6 +101,7 @@ fn main() -> anyhow::Result<()> {
         let response = match msg_typ {
             TypedMessage::Init(msg) => message_to_value(challenges::init::init(msg)?),
             TypedMessage::Echo(msg) => message_to_value(challenges::echo::echo(msg)?),
+            TypedMessage::Generate(msg) => message_to_value(challenges::generate::generate_unique_id(msg)?),
             TypedMessage::Unknown(msg) => Ok(msg),
         }?;
 

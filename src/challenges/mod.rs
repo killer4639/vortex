@@ -4,3 +4,6 @@ pub mod cluster;
 
 #[path = "echo/mod.rs"]
 pub mod echo;
+
+#[path ="generate/mod.rs"]
+pub mod generate;
