@@ -3,6 +3,7 @@ use std::io::{self, BufWriter, Write};
 
 use anyhow::{Context, Result};
 use challenges::broadcast::{BroadcastBody, ReadBody, TopologyBody};
+use challenges::broadcast::gossip::GossipBody;
 use challenges::echo::EchoBody;
 use challenges::init::InitBody;
 use challenges::generate::GenerateBody;
@@ -24,6 +25,7 @@ pub enum TypedMessage {
     Broadcast(Message<BroadcastBody>),
     Read(Message<ReadBody>),
     Topology(Message<TopologyBody>),
+    Gossip(Message<GossipBody>),
     Unknown(Message<Value>),
 }
 
@@ -64,6 +66,7 @@ pub fn parse_typed_message(msg: Message<Value>) -> Result<TypedMessage> {
         "broadcast" => Ok(TypedMessage::Broadcast(parse_message(msg)?)),
         "read" => Ok(TypedMessage::Read(parse_message(msg)?)),
         "topology" => Ok(TypedMessage::Topology(parse_message(msg)?)),
+        "gossip" => Ok(TypedMessage::Gossip(parse_message(msg)?)),
         _ => Ok(TypedMessage::Unknown(msg)),
     }
 }
@@ -111,6 +114,7 @@ fn main() -> anyhow::Result<()> {
             TypedMessage::Broadcast(msg) => message_to_value(challenges::broadcast::broadcast(msg)),
             TypedMessage::Read(msg) => message_to_value(challenges::broadcast::read(msg)),
             TypedMessage::Topology(msg) => message_to_value(challenges::broadcast::topology(msg)),
+            TypedMessage::Gossip(msg) => message_to_value(challenges::broadcast::gossip::gossip(msg)),
             TypedMessage::Unknown(msg) => Ok(msg),
         }?;
 
