@@ -67,21 +67,13 @@ pub fn parse_typed_message(msg: Message<Value>) -> Result<TypedMessage> {
         "read" => Ok(TypedMessage::Read(parse_message(msg)?)),
         "topology" => Ok(TypedMessage::Topology(parse_message(msg)?)),
         "gossip" => Ok(TypedMessage::Gossip(parse_message(msg)?)),
+        "gossip_ok" => Ok(TypedMessage::Gossip(parse_message(msg)?)),
         _ => Ok(TypedMessage::Unknown(msg)),
     }
 }
 
 pub fn parse_message<T: DeserializeOwned>(msg: Message<Value>) -> Result<Message<T>> {
     let body = serde_json::from_value(msg.body)?;
-    Ok(Message {
-        src: msg.src,
-        dest: msg.dest,
-        body,
-    })
-}
-
-pub fn message_to_value<T: Serialize>(msg: Message<T>) -> Result<Message<Value>> {
-    let body = serde_json::to_value(msg.body)?;
     Ok(Message {
         src: msg.src,
         dest: msg.dest,
@@ -99,7 +91,6 @@ pub fn send<T: Serialize>(msg: &Message<T>, output: &mut impl Write) -> Result<(
 fn main() -> anyhow::Result<()> {
     let stdin = io::stdin().lock();
     let mut stdout = BufWriter::new(io::stdout().lock());
-
     let messages = serde_json::Deserializer::from_reader(stdin).into_iter::<Message<Value>>();
 
     // Process remaining messages
@@ -107,18 +98,17 @@ fn main() -> anyhow::Result<()> {
         let msg = msg?;
         let msg_typ = parse_typed_message(msg)?;
 
-        let response = match msg_typ {
-            TypedMessage::Init(msg) => message_to_value(challenges::init::init(msg)?),
-            TypedMessage::Echo(msg) => message_to_value(challenges::echo::echo(msg)?),
-            TypedMessage::Generate(msg) => message_to_value(challenges::generate::generate_unique_id(msg)?),
-            TypedMessage::Broadcast(msg) => message_to_value(challenges::broadcast::broadcast(msg)),
-            TypedMessage::Read(msg) => message_to_value(challenges::broadcast::read(msg)),
-            TypedMessage::Topology(msg) => message_to_value(challenges::broadcast::topology(msg)),
-            TypedMessage::Gossip(msg) => message_to_value(challenges::broadcast::gossip::gossip(msg)),
-            TypedMessage::Unknown(msg) => Ok(msg),
-        }?;
+        match msg_typ {
+            TypedMessage::Init(msg) => challenges::init::init(msg, &mut stdout)?,
+            TypedMessage::Echo(msg) => challenges::echo::echo(msg, &mut stdout)?,
+            TypedMessage::Generate(msg) => challenges::generate::generate_unique_id(msg, &mut stdout)?,
+            TypedMessage::Broadcast(msg) => challenges::broadcast::broadcast(msg, &mut stdout)?,
+            TypedMessage::Read(msg) => challenges::broadcast::read(msg, &mut stdout)?,
+            TypedMessage::Topology(msg) => challenges::broadcast::topology(msg, &mut stdout)?,
+            TypedMessage::Gossip(msg) => challenges::broadcast::gossip::gossip(msg, &mut stdout)?,
+            TypedMessage::Unknown(_msg) => {}
+        }
 
-        send(&response, &mut stdout)?;
     }
     Ok(())
 }

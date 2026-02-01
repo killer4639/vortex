@@ -1,7 +1,8 @@
 use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
 
-use crate::{BodyBase, Message, challenges::cluster::global_cluster};
+use crate::{send, BodyBase, Message, challenges::cluster::global_cluster};
+use std::io::Write;
 
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -14,7 +15,7 @@ pub struct EchoBody {
 }
 
 
-pub fn echo(msg: Message<EchoBody>) -> Result<Message<EchoBody>> {
+pub fn echo(msg: Message<EchoBody>, output: &mut impl Write) -> Result<()> {
     let node_id = msg.dest.clone();
     let mut cluster = global_cluster()
         .write()
@@ -36,5 +37,5 @@ pub fn echo(msg: Message<EchoBody>) -> Result<Message<EchoBody>> {
         },
     };
 
-    Ok(reply)
+    send(&reply, output)
 }

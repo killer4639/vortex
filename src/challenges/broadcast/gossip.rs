@@ -1,7 +1,10 @@
 use crate::BodyBase;
 use crate::challenges::cluster::global_cluster;
+use crate::send;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
+use std::io::Write;
 
 use crate::{Message, challenges::broadcast::BroadcastData};
 
@@ -14,7 +17,7 @@ pub struct GossipBody {
     pub gossip_data: Option<HashSet<u64>>,
 }
 
-pub fn gossip(msg: Message<GossipBody>) -> Message<GossipBody> {
+pub fn gossip(msg: Message<GossipBody>, output: &mut impl Write) -> Result<()> {
     let mut cluster = global_cluster().write().unwrap();
     let node = cluster.get_node_mut(&msg.dest).unwrap();
     if node.broadcast_data.is_none() {
@@ -29,18 +32,22 @@ pub fn gossip(msg: Message<GossipBody>) -> Message<GossipBody> {
 
     let msg_id = node.get_next_id();
     let src = node.id.clone();
-
-    let response: Message<GossipBody> = Message {
-        src,
-        dest: msg.src,
-        body: GossipBody {
-            base: BodyBase {
-                typ: "gossip_ok".to_string(),
-                in_reply_to: msg.body.base.msg_id,
-                msg_id: Some(msg_id),
+    if msg.body.base.typ == "gossip" {
+        let response: Message<GossipBody> = Message {
+            src,
+            dest: msg.src,
+            body: GossipBody {
+                base: BodyBase {
+                    typ: "gossip_ok".to_string(),
+                    in_reply_to: msg.body.base.msg_id,
+                    msg_id: Some(msg_id),
+                },
+                gossip_data: Some(node.broadcast_data.clone().unwrap().data),
             },
-            gossip_data: None,
-        },
-    };
-    response
+        };
+        drop(cluster);
+        return send(&response, output);
+    }
+
+    Ok(())
 }

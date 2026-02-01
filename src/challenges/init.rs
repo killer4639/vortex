@@ -2,9 +2,10 @@ use std::str::FromStr;
 
 use crate::challenges::{cluster::global_cluster, node::Node};
 
-use super::super::{BodyBase, Message};
+use super::super::{send, BodyBase, Message};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
+use std::io::Write;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct InitBody {
@@ -19,7 +20,7 @@ pub struct InitBody {
 }
 
 /// Replies to an init message with init_ok.
-pub fn init(msg: Message<InitBody>) -> Result<Message<InitBody>> {
+pub fn init(msg: Message<InitBody>, output: &mut impl Write) -> Result<()> {
     let node_id = msg.body.node_id.clone().unwrap();
     let peers = msg.body.node_ids.clone().unwrap();
     let node: Node = Node {
@@ -47,5 +48,5 @@ pub fn init(msg: Message<InitBody>) -> Result<Message<InitBody>> {
         },
     };
 
-    Ok(response)
+    send(&response, output)
 }

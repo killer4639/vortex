@@ -1,6 +1,7 @@
-use crate::{BodyBase, Message, challenges::cluster::global_cluster};
-use anyhow::{Context, Ok, Result};
+use crate::{send, BodyBase, Message, challenges::cluster::global_cluster};
+use anyhow::{Context, Result};
 use serde::{Deserialize, Serialize};
+use std::io::Write;
 use uuid::Uuid;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -11,7 +12,7 @@ pub struct GenerateBody {
     id: Option<String>,
 }
 
-pub fn generate_unique_id(msg: Message<GenerateBody>) -> Result<Message<GenerateBody>> {
+pub fn generate_unique_id(msg: Message<GenerateBody>, output: &mut impl Write) -> Result<()> {
     let node_id = msg.dest.clone();
     let mut cluster = global_cluster().write().expect("cluster lock poisoned");
     let node = cluster
@@ -31,5 +32,5 @@ pub fn generate_unique_id(msg: Message<GenerateBody>) -> Result<Message<Generate
             },
         },
     };
-    Ok(response)
+    send(&response, output)
 }

@@ -1,11 +1,13 @@
 pub mod gossip;
 
 use crate::{
-    BodyBase, Message,
+    send, BodyBase, Message,
     challenges::{broadcast::gossip::GossipBody, cluster::global_cluster},
 };
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
+use std::io::Write;
 
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct BroadcastBody {
@@ -49,7 +51,7 @@ impl BroadcastData {
     }
 }
 
-pub fn broadcast(msg: Message<BroadcastBody>) -> Message<BroadcastBody> {
+pub fn broadcast(msg: Message<BroadcastBody>, output: &mut impl Write) -> Result<()> {
     let mut cluster = global_cluster().write().unwrap();
     let node = cluster.get_node_mut(&msg.dest).unwrap();
     if node.broadcast_data.is_none() {
@@ -62,12 +64,16 @@ pub fn broadcast(msg: Message<BroadcastBody>) -> Message<BroadcastBody> {
         broadcast_data.add_data(msg.body.message.unwrap());
     }
 
-    for peer in node.peers.clone() {
+    let peers = node.peers.clone();
+    let src = node.id.clone();
+    let gossip_data = node.broadcast_data.clone().unwrap().data;
+    let mut gossip_messages: Vec<Message<GossipBody>> = Vec::new();
+    for peer in peers {
         if peer == node.id {
             continue;
         }
         let gossip_message: Message<_> = Message {
-            src: node.id.clone(),
+            src: src.clone(),
             dest: peer,
             body: GossipBody {
                 base: BodyBase {
@@ -75,13 +81,10 @@ pub fn broadcast(msg: Message<BroadcastBody>) -> Message<BroadcastBody> {
                     msg_id: Some(node.get_next_id()),
                     in_reply_to: None,
                 },
-                gossip_data: Some(node.broadcast_data.clone().unwrap().data),
+                gossip_data: Some(gossip_data.clone()),
             },
         };
-        println!(
-            "{}",
-            serde_json::to_string(&gossip_message).unwrap_or_default()
-        );
+        gossip_messages.push(gossip_message);
     }
 
     let response: Message<BroadcastBody> = Message {
@@ -96,10 +99,15 @@ pub fn broadcast(msg: Message<BroadcastBody>) -> Message<BroadcastBody> {
             message: None,
         },
     };
-    response
+    drop(cluster);
+
+    for gossip_message in gossip_messages {
+        send(&gossip_message, output)?;
+    }
+    send(&response, output)
 }
 
-pub fn read(msg: Message<ReadBody>) -> Message<ReadBody> {
+pub fn read(msg: Message<ReadBody>, output: &mut impl Write) -> Result<()> {
     let mut cluster = global_cluster().write().unwrap();
     let node = cluster.get_node_mut(&msg.dest).unwrap();
     if node.broadcast_data.is_none() {
@@ -126,10 +134,11 @@ pub fn read(msg: Message<ReadBody>) -> Message<ReadBody> {
             messages: Some(messages),
         },
     };
-    response
+    drop(cluster);
+    send(&response, output)
 }
 
-pub fn topology(msg: Message<TopologyBody>) -> Message<TopologyBody> {
+pub fn topology(msg: Message<TopologyBody>, output: &mut impl Write) -> Result<()> {
     let mut cluster = global_cluster().write().unwrap();
     let node = cluster.get_node_mut(&msg.dest).unwrap();
 
@@ -145,5 +154,6 @@ pub fn topology(msg: Message<TopologyBody>) -> Message<TopologyBody> {
             topology: None,
         },
     };
-    response
+    drop(cluster);
+    send(&response, output)
 }
