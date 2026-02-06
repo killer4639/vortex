@@ -56,6 +56,7 @@ pub struct TopologyBody {
 pub struct BroadcastData {
     pub data: HashSet<u64>,
     pub seen_msg: HashSet<(String, u64)>,
+    pub last_gossip_len: usize,
 }
 
 impl BroadcastData {
@@ -63,6 +64,7 @@ impl BroadcastData {
         Self {
             data: HashSet::new(),
             seen_msg: HashSet::new(),
+            last_gossip_len: 0,
         }
     }
 
@@ -119,6 +121,10 @@ pub fn prepare_gossip_batch(node_id: &str) -> Option<(String, HashSet<u64>, Vec<
 
     let broadcast_data = node.broadcast_data.get_or_insert_with(BroadcastData::new);
     let gossip_data = broadcast_data.clone_data();
+    if gossip_data.len() == broadcast_data.last_gossip_len {
+        return None;
+    }
+    broadcast_data.last_gossip_len = gossip_data.len();
     let src = node.id.clone();
     let node_id_owned = node.id.clone();
 
@@ -208,7 +214,8 @@ pub fn broadcast(msg: Message<BroadcastBody>, output: &mut impl Write) -> Result
         }
 
         // Prepare gossip messages for all peers
-        let gossip_data = node.broadcast_data.as_ref().unwrap().clone_data();
+        let gossip_data = broadcast_data.clone_data();
+        broadcast_data.last_gossip_len = gossip_data.len();
         let node_id = node.id.clone();
 
         let peer_list: Vec<String> = node

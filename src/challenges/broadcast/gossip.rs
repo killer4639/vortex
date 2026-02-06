@@ -1,8 +1,8 @@
-use crate::challenges::broadcast::send_gossip_to_peers;
 use crate::challenges::cluster::global_cluster;
 use crate::send;
-use crate::{BodyBase, challenges::broadcast::prepare_gossip_batch, challenges::broadcast::spawn_gossip_thread};
-use anyhow::{Ok, Result};
+use crate::BodyBase;
+use crate::challenges::broadcast::spawn_gossip_thread;
+use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::io::Write;
@@ -47,7 +47,6 @@ pub fn gossip(msg: Message<GossipBody>, output: &mut impl Write) -> Result<()> {
     }
 
     let msg_id = node.get_next_id();
-    let src = node.id.clone();
     let response: Message<GossipBody> = Message {
         src: node.id.clone(),
         dest: msg.src,
@@ -62,19 +61,6 @@ pub fn gossip(msg: Message<GossipBody>, output: &mut impl Write) -> Result<()> {
             org_msg_src: msg.body.org_msg_src.clone(),
         },
     };
-
-    drop(cluster);
-    let (src, data, peers) = prepare_gossip_batch(&src).unwrap();
-
-    if !peers.is_empty() {
-        send_gossip_to_peers(
-            &src,
-            &data,
-            &peers,
-            msg.body.org_msg_id,
-            &msg.body.org_msg_src,
-        );
-    }
 
     return send(&response, output);
 }
