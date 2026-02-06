@@ -1,6 +1,4 @@
-use std::thread::Thread;
-
-use crate::challenges::broadcast::BroadcastData;
+use std::{collections::HashMap, thread::Thread};
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -8,7 +6,14 @@ pub struct Node {
     pub id: String,
     pub peers: Vec<String>,
     pub next_msg_id: u64,
-    pub broadcast_data: Option<BroadcastData>,
+
+    // Gcounter fields
+    pub gcounter_data: GcounterData,
+}
+
+#[derive(Debug)]
+pub struct GcounterData {
+    pub node_data: HashMap<String, u64>,
     pub gossip_thread: Option<Thread>
 }
 

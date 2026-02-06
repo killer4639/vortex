@@ -1,6 +1,9 @@
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
-use crate::challenges::{cluster::global_cluster, node::Node};
+use crate::challenges::{
+    cluster::global_cluster,
+    node::{GcounterData, Node},
+};
 
 use super::super::{BodyBase, Message, send};
 use anyhow::Result;
@@ -27,8 +30,10 @@ pub fn init(msg: Message<InitBody>, output: &mut impl Write) -> Result<()> {
         id: node_id.clone(),
         peers,
         next_msg_id: 0,
-        broadcast_data: None,
-        gossip_thread: None,
+        gcounter_data: GcounterData {
+            node_data: HashMap::new(),
+            gossip_thread: None
+        },
     };
 
     let cluster = global_cluster();
