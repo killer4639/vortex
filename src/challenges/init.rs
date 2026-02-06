@@ -2,7 +2,7 @@ use std::str::FromStr;
 
 use crate::challenges::{cluster::global_cluster, node::Node};
 
-use super::super::{send, BodyBase, Message};
+use super::super::{BodyBase, Message, send};
 use anyhow::Result;
 use serde::{Deserialize, Serialize};
 use std::io::Write;
@@ -27,9 +27,10 @@ pub fn init(msg: Message<InitBody>, output: &mut impl Write) -> Result<()> {
         id: node_id.clone(),
         peers,
         next_msg_id: 0,
-        broadcast_data: None
+        broadcast_data: None,
+        gossip_thread: None,
     };
-    
+
     let cluster = global_cluster();
     let mut cluster = cluster.write().expect("cluster lock poisoned");
     cluster.add_node(node);

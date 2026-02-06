@@ -1,17 +1,18 @@
-
 use std::collections::HashMap;
 use std::sync::{OnceLock, RwLock};
 
 use super::node::Node;
 
 pub struct Cluster {
-    nodes: HashMap<String, Node>,
+    pub nodes: HashMap<String, Node>,
+    pub is_topology_done: bool
 }
 
 impl Cluster {
     pub fn new() -> Self {
         Self {
             nodes: HashMap::new(),
+            is_topology_done: false
         }
     }
 
