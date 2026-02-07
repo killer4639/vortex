@@ -1,6 +1,4 @@
-use std::thread::Thread;
-
-use crate::challenges::broadcast::BroadcastData;
+use crate::challenges::kafka::KafkaNodeData;
 
 #[derive(Debug)]
 #[allow(dead_code)]
@@ -8,8 +6,7 @@ pub struct Node {
     pub id: String,
     pub peers: Vec<String>,
     pub next_msg_id: u64,
-    pub broadcast_data: Option<BroadcastData>,
-    pub gossip_thread: Option<Thread>
+    pub kafka_data: KafkaNodeData
 }
 
 impl Node {

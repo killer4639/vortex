@@ -2,13 +2,13 @@ mod challenges;
 use std::io::{self, BufWriter, Write};
 
 use anyhow::{Context, Result};
-use challenges::broadcast::{BroadcastBody, ReadBody, TopologyBody};
-use challenges::broadcast::gossip::GossipBody;
 use challenges::echo::EchoBody;
-use challenges::init::InitBody;
 use challenges::generate::GenerateBody;
+use challenges::init::InitBody;
 use serde::{Deserialize, Serialize, de::DeserializeOwned};
 use serde_json::Value;
+
+use crate::challenges::kafka::{CommitBody, ListOffsetsBody, PollBody, SendBody};
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 pub struct Message<T> {
@@ -22,10 +22,10 @@ pub enum TypedMessage {
     Init(Message<InitBody>),
     Echo(Message<EchoBody>),
     Generate(Message<GenerateBody>),
-    Broadcast(Message<BroadcastBody>),
-    Read(Message<ReadBody>),
-    Topology(Message<TopologyBody>),
-    Gossip(Message<GossipBody>),
+    Send(Message<SendBody>),
+    Poll(Message<PollBody>),
+    CommitOffset(Message<CommitBody>),
+    ListOffset(Message<ListOffsetsBody>),
     Unknown(Message<Value>),
 }
 
@@ -63,11 +63,10 @@ pub fn parse_typed_message(msg: Message<Value>) -> Result<TypedMessage> {
         "init" => Ok(TypedMessage::Init(parse_message(msg)?)),
         "echo" => Ok(TypedMessage::Echo(parse_message(msg)?)),
         "generate" => Ok(TypedMessage::Generate(parse_message(msg)?)),
-        "broadcast" => Ok(TypedMessage::Broadcast(parse_message(msg)?)),
-        "read" => Ok(TypedMessage::Read(parse_message(msg)?)),
-        "topology" => Ok(TypedMessage::Topology(parse_message(msg)?)),
-        "gossip" => Ok(TypedMessage::Gossip(parse_message(msg)?)),
-        "gossip_ok" => Ok(TypedMessage::Gossip(parse_message(msg)?)),
+        "send" => Ok(TypedMessage::Send(parse_message(msg)?)),
+        "poll" => Ok(TypedMessage::Poll(parse_message(msg)?)),
+        "commit_offsets" => Ok(TypedMessage::CommitOffset(parse_message(msg)?)),
+        "list_committed_offsets" => Ok(TypedMessage::ListOffset(parse_message(msg)?)),
         _ => Ok(TypedMessage::Unknown(msg)),
     }
 }
@@ -101,14 +100,17 @@ fn main() -> anyhow::Result<()> {
         match msg_typ {
             TypedMessage::Init(msg) => challenges::init::init(msg, &mut stdout)?,
             TypedMessage::Echo(msg) => challenges::echo::echo(msg, &mut stdout)?,
-            TypedMessage::Generate(msg) => challenges::generate::generate_unique_id(msg, &mut stdout)?,
-            TypedMessage::Broadcast(msg) => challenges::broadcast::broadcast(msg, &mut stdout)?,
-            TypedMessage::Read(msg) => challenges::broadcast::read(msg, &mut stdout)?,
-            TypedMessage::Topology(msg) => challenges::broadcast::topology(msg, &mut stdout)?,
-            TypedMessage::Gossip(msg) => challenges::broadcast::gossip::gossip(msg, &mut stdout)?,
+            TypedMessage::Generate(msg) => {
+                challenges::generate::generate_unique_id(msg, &mut stdout)?
+            }
+            TypedMessage::Send(msg) => challenges::kafka::send_log(msg, &mut stdout)?,
+            TypedMessage::Poll(msg) => challenges::kafka::poll(msg, &mut stdout)?,
+            TypedMessage::CommitOffset(msg) => challenges::kafka::commit(msg, &mut stdout)?,
+            TypedMessage::ListOffset(msg) => {
+                challenges::kafka::list_offset_bodies(msg, &mut stdout)?
+            }
             TypedMessage::Unknown(_msg) => {}
         }
-
     }
     Ok(())
 }

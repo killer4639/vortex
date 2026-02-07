@@ -1,6 +1,6 @@
 use std::str::FromStr;
 
-use crate::challenges::{cluster::global_cluster, node::Node};
+use crate::challenges::{cluster::global_cluster, kafka::KafkaNodeData, node::Node};
 
 use super::super::{BodyBase, Message, send};
 use anyhow::Result;
@@ -27,8 +27,7 @@ pub fn init(msg: Message<InitBody>, output: &mut impl Write) -> Result<()> {
         id: node_id.clone(),
         peers,
         next_msg_id: 0,
-        broadcast_data: None,
-        gossip_thread: None,
+        kafka_data: KafkaNodeData::new()
     };
 
     let cluster = global_cluster();
