@@ -1,4 +1,4 @@
-use std::str::FromStr;
+use std::{collections::HashMap, str::FromStr};
 
 use crate::challenges::{cluster::global_cluster, node::Node};
 
@@ -27,8 +27,8 @@ pub fn init(msg: Message<InitBody>, output: &mut impl Write) -> Result<()> {
         id: node_id.clone(),
         peers,
         next_msg_id: 0,
-        broadcast_data: None,
-        gossip_thread: None,
+        pending: HashMap::new(),
+        commited: HashMap::new()
     };
 
     let cluster = global_cluster();
